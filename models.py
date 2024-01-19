@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Annotated
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, text
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, validates
+import requests
 
 
 metadata = MetaData()
@@ -45,7 +46,28 @@ class Posts(Base):
     Content: Mapped[str] = mapped_column(nullable=True)
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
-    URL: Mapped[str]
+    photoURL: Mapped[str]
+
+    @validates('photoURL')
+    def validate_url(self, key, value):
+        """ Валидация фотографии при загрузке в пост """
+        # Проверка формата файла
+        try:
+            response = requests.get(value)
+            response.raise_for_status()  # Проверка успешности запроса
+            image_data = response.content
+
+            # Ваш код проверки формата изображения, например, проверка на магический номер (Magic Number)
+            # ...
+
+            # Проверка размера файла
+            max_size_in_bytes = 5 * 1024 * 1024  # Например, максимальный размер - 5 МБ
+            if len(image_data) > max_size_in_bytes:
+                raise ValueError('Превышен максимальный размер файла')
+        except Exception as e:
+            raise ValueError('Ошибка при получении изображения') from e
+
+        return value
 
 
 class Comments(Base):
