@@ -1,6 +1,6 @@
 from models import metadata, Base, Posts, Users, Followers, Comments, Categories, PhotoCategories
 from database import session, engine
-from sqlalchemy import select
+from sqlalchemy import select, func, cast, and_
 
 
 """
@@ -34,32 +34,55 @@ def create_table():
     engine.echo = True
 
 
-"""
 def insert_data():
-    with session():
-        worker_admin = WorkersOrm(username="admin")
-        worker_kiril = WorkersOrm(username="Kiril")
-        worker_semyon = WorkersOrm(username="Semyon")
+    with session() as sess:
+        user_1 = Users(username="admin", password="admin", email="admin@mail")
+        user_2 = Users(username="petya", password="123", email="petya@mail")
+        user_3 = Users(username="vanya", password="123", email="vanya@mail")
+        user_4 = Users(username="net", password="2222", email="777")
 
-        # ses.add(worker_admin)
-        session.add_all([worker_admin, worker_kiril, worker_semyon])
-        session.flush()  # Внесение в бд, для дальнейшей связанной логики
-        session.commit()
+        # ses.add(user_1)
+        sess.add_all([user_1, user_2, user_3, user_4])
+        sess.flush()  # Внесение в бд, для дальнейшей связанной логики
+        sess.commit()
 
 
 def select_users():
-    with session():
-        # user_id = 1
-        # user_admin = session.get(WorkersOrm, worker_id)
-
-        query = select(WorkersOrm)
-        res = session.execute(query).all()
-        print(f'{res=}')
+    with session() as sess:
+        query = (select(Users.username).select_from(Users))
+        res = sess.execute(query)
+        result = res.all()
+        print(result)
         
 
-def update_worker(worker_id: int = 2, new_username: str = 'Misha'):
-    with session():
-        worker_2 = session.get(WorkersOrm, worker_id)  # Берем экземпляр
+def update_users(user_id: int = 2, new_username: str = 'Misha'):
+    with session() as sess:
+        worker_2 = sess.get(Users, user_id)  # Берем экземпляр
         worker_2.username = new_username  # Меняем параметры
-        session.commit()
-"""
+        sess.commit()
+
+
+def select_all_users(param: str = "@mail"):
+    """
+
+    :return:
+    """
+    with session() as sess:
+        query = (
+            select(
+                Users.username,
+                Users.password.label('Pass'),
+                Users.email,
+                Users.bio
+                # Тут можно описать функцией новый столбец
+            )
+            .select_from(Users)
+            .filter(and_(
+                Users.email.contains(param)  # Фильтруем по наличию подстроки
+            ))
+            # .group_by(Users.password)  # Группировка
+        )
+        res = sess.execute(query)
+        result = res.all()
+        print(result)
+
